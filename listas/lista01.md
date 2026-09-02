@@ -110,7 +110,7 @@ INSERT INTO orders_products (order_id, product_id, quantity, unit_price) VALUES
 ```sql
 -- 1.	Liste os produtos com preço superior a R$ 1000.
 
-    select * from products
+select * from products
     where price > 1000;
 
 -- 2.	Liste os produtos ordenados pelo preço, do maior para o menor.
@@ -193,12 +193,9 @@ select p.name, count(p.id) qnt_vendido
 
 -- 15.	Gerar um relatório com: usuários, quantidade de pedidos e valor total comprado.
 
-select
-    u.name, 
-    count(o.id) quantidade_pedidos, 
-    COALESCE(sum(o.total), 0) valor_total_comprado
-from users u
-left join orders o on u.id = o.user_id
-group by u.id
-order by valor_total_comprado DESC;
+select u.name, count(o.id) quantidade_pedidos, COALESCE(sum(o.total), 0) valor_total_comprado
+    from users u
+    left join orders o on u.id = o.user_id
+    group by u.id
+    order by valor_total_comprado DESC;
 ```
