@@ -108,7 +108,7 @@ INSERT INTO orders_products (order_id, product_id, quantity, unit_price) VALUES
 ## Prática DML/DQL
 
 ```sql
-1.	Liste os produtos com preço superior a R$ 1000.
+-- 1.	Liste os produtos com preço superior a R$ 1000.
 
     select * from products
     where price > 1000;
