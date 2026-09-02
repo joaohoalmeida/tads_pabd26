@@ -108,17 +108,95 @@ INSERT INTO orders_products (order_id, product_id, quantity, unit_price) VALUES
 ## Prática DML/DQL
 
 1.	Liste os produtos com preço superior a R$ 1000.
+
+select * from products
+    where price > 1000;
+
 2.	Liste os produtos ordenados pelo preço, do maior para o menor.
+
+select * from products
+    order by price desc;
+
 3.	Aumente o preço de todos os produtos da `Dell` em 10%.
+
+update products
+    set price = price * 1.10
+    where name like '%Dell%'
+    returning *;
+
 4.	Exclua todos os produtos que sejam do tipo `Macbook`.
+
+delete from products
+    where name like '%Macbook%'
+    returning *; 
+
 5.	Exclua um produto que não possua pedidos associados.
+
+delete from products
+    where id not in (select product_id from orders_products)
+    returning *; 
+
 6.	Liste todos os pedidos realizados nos últimos 30 dias.
+
+select * from orders
+    where order_date >= now() - interval '30 days';
+
 7.	Liste os pedidos e os respectivos nomes de usuário.
+
+select o.*, u.name 
+    from orders o
+    join users u on o.user_id = u.id;
+
 8.	Liste todos os usuários e seus pedidos, inclusive usuários sem pedidos.
+
+select u.name, o.* 
+    from users u
+    left join orders o on u.id = o.user_id;
+
 9.	Liste todos os usuários (id, nome e email) que realizaram pelo menos um pedido.
+
+select distinct u.id, u.name, u.email
+    from users u
+    join orders o on u.id = o.user_id;
+
 10.	Liste produtos que nunca foram vendidos.
+
+select * from products
+    where id not in (select product_id from orders_products);
+
 11.	Liste usuários que nunca realizaram pedidos.
+
+select * from users
+    where id not in (select user_id from orders);
+
 12.	Liste os produtos com preço acima da média em ordem decrescente.
+
+select * from products
+    where price > (select avg(price) from products)
+    order by price desc;
+
 13.	Liste a quantidade de pedidos realizados por cada usuário.
+
+select u.name, count(o.id) as qntd_pedido
+    from users u
+    left join orders o on u.id = o.user_id
+    group by u.id;
+
 14.	Listar os três produtos mais vendidos.
+
+select p.name, count(p.id) qnt_vendido
+    from products p
+    join orders_products o on p.id = o.product_id
+    group by p.id
+    limit 3;
+
 15.	Gerar um relatório com: usuários, quantidade de pedidos e valor total comprado.
+
+select
+    u.name, 
+    count(o.id) quantidade_pedidos, 
+    COALESCE(sum(o.total), 0) valor_total_comprado
+from users u
+left join orders o on u.id = o.user_id
+group by u.id
+order by valor_total_comprado DESC;
