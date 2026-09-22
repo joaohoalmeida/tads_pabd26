@@ -71,3 +71,17 @@ INSERT INTO employee_json (data) VALUES
         "country": "EUA"
     }
 }');
+
+INSERT INTO employee_json (data) VALUES
+('{
+    "first_name": "George",
+    "last_name": "Santos",
+    "position": "Developer",
+    "salary": 25789,
+    "skills": ["sql", "javascript", "react"],
+    "address": {
+        "city": "Teresina",
+        "state": "PI",
+        "country": "Brasil"
+    }
+}');

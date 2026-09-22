@@ -282,3 +282,67 @@ where data @> '{"address": {"country": "Brasil"}}';
 select id, data ->> 'first_name' first_name
 from employee_json
 where data @> '{"skills": ["react", "sql"]}';
+
+-- ## OPERADORES DE EXISTÊNCIA DE CHAVE
+
+-- ? verifica se a chave existe
+select id, data ->> 'first_name' first_name
+from employee_json
+where data ? 'active';
+
+-- existência de chave dentro do objeto aninhado 'address'
+select id, data ->> 'first_name' first_name
+from employee_json
+where data -> 'address' ? 'state';
+
+-- ?| verifica se QUALQUER uma das chaves dentro de array existem 
+select id, data ->> 'first_name' first_name
+from employee_json
+where data ?| array['salary', 'active'];
+
+-- ?& verifica se TODAS as chaves dentro de array existem
+select id, data ->> 'first_name' first_name
+from employee_json
+where data ?& array['salary', 'active'];
+
+-- # OPERADORES DE CAMINHO (jsonb_path_ops)
+
+-- @? verifica se o caminho retorna algum item
+-- $ representa o jsonb (data)
+-- @ representa o item atual no caminho
+select id, data ->> 'first_name' first_name, data ->> 'salary' salary
+from employee_json
+where data @? '$.salary ? (@ > 5000)';
+
+select id, data ->> 'first_name' first_name, data ->> 'salary' salary
+from employee_json
+where data @? '$.skills[*] ? (@ == "sql")';
+
+-- @@ 
+select id, data ->> 'first_name' first_name, data ->> 'salary' salary
+from employee_json
+where data @@ '$.salary > 5000';
+
+select id, data ->> 'first_name' first_name, data ->> 'salary' salary
+from employee_json
+where data @@ '$.salary > 5000 && $.active == true';
+
+drop index if exists idx_employee_json_gin;
+create index idx_employee_json_gin on employee_json using gin(data);
+
+explain analyze
+select id, data ->> 'first_name' first_name
+from employee_json
+where data @> '{"first_name": "Gael"}';
+
+-- Se sua busca utiliza somente @>, @? e @@ (jsonb_path_ops)
+drop index if exists idx_employee_json_gin_path;
+create index idx_employee_json_gin_path 
+    on employee_json 
+    using gin(data jsonb_path_ops);
+
+-- Se sua busca concentra-se somente em um chave (first_name)
+drop index if exists idx_employee_json_gin_first_name;
+create index idx_employee_json_gin_first_name 
+    on employee_json 
+    using gin((data -> 'first_name') jsonb_path_ops);
