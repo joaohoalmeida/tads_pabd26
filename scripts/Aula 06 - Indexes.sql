@@ -134,8 +134,10 @@ TO DO: CRIAÇÃO DE ÍNDICES - Esquema lista01
 - Baseado nas views (comando \dmv), quais índices poderiam ser criados?
 - Para forçar o uso dos índices em tabelas pequenas: SET enable_seqscan = off;
  */
--- Típos de índices
--- Hash
+
+-- # Típos de índices
+
+-- ## Hash
 drop index if exists idx_customer_email_hash;
 
 create index idx_customer_email_hash on customer using hash (email);
@@ -206,3 +208,141 @@ where (
     setweight(to_tsvector('portuguese', body), 'B')
     ) @@ to_tsquery('portuguese', 'postgresql')
 order by rank desc;
+
+-- Para tabelas muito grandes, criar coluna gerada (search_vector) e um índice GIN
+-- OBS.: Olhar alteração no DDL da tabela posts
+
+drop index idx_posts_search_vector_gin;
+create index idx_posts_search_vector_gin on posts using gin (search_vector);
+
+explain analyze
+select
+    id,
+    title,
+    body,
+    ts_rank(
+        search_vector,
+        to_tsquery('portuguese', 'postgresql')
+    ) rank
+from posts
+where search_vector @@ to_tsquery('portuguese', 'postgresql')
+order by rank desc;
+
+-- PostgreSQL analisa se vale a pena usar índice. Para forçar:
+set enable_seqscan = off;
+
+-- Para resetar:
+reset enable_seqscan;
+
+-- # JSON Search
+
+-- ## Operadores de extração
+
+-- -> extrai o campo como json/jsonb
+select id, data -> 'position' position_jsonb from employee_json;
+
+-- ->> extrair o campo como text
+select id, data ->> 'position' position_text from employee_json;
+
+select id, data ->> 'first_name' first_name
+from employee_json
+where data ->> 'position' = 'Developer';
+
+select id, data ->> 'first_name' first_name, data ->> 'salary' salary
+from employee_json
+where (data ->> 'salary')::numeric > 5000;
+
+-- #> usado para valores aninhados. Retorna jsonb
+select id, data #> '{address, country}' country_json
+from employee_json;
+
+-- #>> usado para valores aninhados. Retorna text
+select id, data #>> '{address, country}' country_text
+from employee_json;
+
+select id, data #>> '{address, country}' country_text
+from employee_json
+where data #>> '{address, country}' = 'Brasil'; 
+
+-- # OPERADORES DE CONTENÇÃO
+
+-- @> 'data' CONTÉM ...?
+select id, data ->> 'first_name' first_name
+from employee_json
+where data @> '{"first_name": "Gael"}';
+
+select id, data ->> 'first_name' first_name
+from employee_json
+where data @> '{"position": "Developer", "active": true}';
+
+select id, data ->> 'first_name' first_name
+from employee_json
+where data @> '{"address": {"country": "Brasil"}}';
+
+select id, data ->> 'first_name' first_name
+from employee_json
+where data @> '{"skills": ["react", "sql"]}';
+
+-- ## OPERADORES DE EXISTÊNCIA DE CHAVE
+
+-- ? verifica se a chave existe
+select id, data ->> 'first_name' first_name
+from employee_json
+where data ? 'active';
+
+-- existência de chave dentro do objeto aninhado 'address'
+select id, data ->> 'first_name' first_name
+from employee_json
+where data -> 'address' ? 'state';
+
+-- ?| verifica se QUALQUER uma das chaves dentro de array existem 
+select id, data ->> 'first_name' first_name
+from employee_json
+where data ?| array['salary', 'active'];
+
+-- ?& verifica se TODAS as chaves dentro de array existem
+select id, data ->> 'first_name' first_name
+from employee_json
+where data ?& array['salary', 'active'];
+
+-- # OPERADORES DE CAMINHO (jsonb_path_ops)
+
+-- @? verifica se o caminho retorna algum item
+-- $ representa o jsonb (data)
+-- @ representa o item atual no caminho
+select id, data ->> 'first_name' first_name, data ->> 'salary' salary
+from employee_json
+where data @? '$.salary ? (@ > 5000)';
+
+select id, data ->> 'first_name' first_name, data ->> 'salary' salary
+from employee_json
+where data @? '$.skills[*] ? (@ == "sql")';
+
+-- @@ 
+select id, data ->> 'first_name' first_name, data ->> 'salary' salary
+from employee_json
+where data @@ '$.salary > 5000';
+
+select id, data ->> 'first_name' first_name, data ->> 'salary' salary
+from employee_json
+where data @@ '$.salary > 5000 && $.active == true';
+
+drop index if exists idx_employee_json_gin;
+create index idx_employee_json_gin on employee_json using gin(data);
+
+explain analyze
+select id, data ->> 'first_name' first_name
+from employee_json
+where data @> '{"first_name": "Gael"}';
+
+-- Se sua busca utiliza somente @>, @? e @@ (jsonb_path_ops)
+drop index if exists idx_employee_json_gin_path;
+create index idx_employee_json_gin_path 
+    on employee_json 
+    using gin(data jsonb_path_ops);
+
+-- Se sua busca concentra-se somente em um chave (first_name)
+drop index if exists idx_employee_json_gin_first_name;
+create index idx_employee_json_gin_first_name 
+    on employee_json 
+    using gin((data -> 'first_name') jsonb_path_ops);

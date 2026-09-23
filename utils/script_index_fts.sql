@@ -4,6 +4,11 @@ CREATE TABLE
         id serial PRIMARY KEY,
         title text NOT NULL,
         body text NOT NULL,
+        search_vector tsvector
+        generated always as (
+            setweight(to_tsvector('portuguese', title), 'A') ||
+            setweight(to_tsvector('portuguese', body), 'B')
+        ) stored,
         created_at timestamptz NOT NULL DEFAULT now ()
     );
 
