@@ -51,3 +51,4 @@ CREATE TABLE points_adjustment_audit (
 ## Questão 3 - Impedir exclusão de piloto com histórico
 
 Crie uma trigger para impedir a exclusão de um piloto da tabela `driver` caso existam registros na `race_data` vinculados a ele. Lance uma exceção com o nome do piloto. Para testar, tente excluir Ayrton Senna da tabela `driver`. Logo após, exclua algum piloto sem registros em `race_data`.
+

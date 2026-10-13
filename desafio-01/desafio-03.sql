@@ -1,10 +1,17 @@
-create or replace function point_adjusment()
+create or replace function prevent_driver_deletion()
     returns trigger
     language plpgsql
 as $$
 begin
-    insert into point_adjusment_audit(id, year, driver_id, old_points, new_points, change_at)
-        values(OLD.id, OLD.year. OLD.old_points, NEW.new_points, NEW.change_at)
-    return NEW;
-end
+    if exists (select 1 from race_data where driver_id = OLD.driver_id) then
+        raise exception 'Não permitido pilotos com registro', OLD.driver_id;
+    end if;
+    return old;
+end;
 $$;
+
+drop trigger if exists trg_prevent_driver_del on driver;
+create trigger trg_prevent_driver_del
+before delete on driver
+for each row
+execute function prevent_driver_deletion();
