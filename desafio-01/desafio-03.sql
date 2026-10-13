@@ -4,7 +4,7 @@ create or replace function prevent_driver_deletion()
 as $$
 begin
     if exists (select 1 from race_data where driver_id = OLD.driver_id) then
-        raise exception 'Não permitido pilotos com registro', OLD.driver_id;
+        raise exception 'Não permitido deletar pilotos com registro', OLD.driver_id;
     end if;
     return old;
 end;
